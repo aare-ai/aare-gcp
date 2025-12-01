@@ -35,8 +35,10 @@ aare-gcp/
 ├── handlers/
 │   ├── __init__.py
 │   ├── llm_parser.py            # LLM output text parser
+│   ├── formula_compiler.py      # Compile JSON formulas to Z3
 │   ├── ontology_loader.py       # Loads rules from GCS
 │   └── smt_verifier.py          # Z3 theorem prover engine
+├── ontologies/                  # Compliance rule definitions
 ├── infra/
 │   ├── main.tf                  # Terraform infrastructure
 │   └── terraform.tfvars.example # Example variables
@@ -193,6 +195,7 @@ Verifies LLM output against compliance constraints.
 {
   "verified": true,
   "violations": [],
+  "warnings": ["Variables defaulted (not found in input): ['variable_name']"],
   "parsed_data": {
     "dti": 35,
     "credit_score": 720,
@@ -213,11 +216,32 @@ Verifies LLM output against compliance constraints.
 }
 ```
 
-## Available Ontologies
+**Note:** The `warnings` field appears when variables couldn't be extracted from the LLM output and were defaulted.
 
-- `mortgage-compliance-v1` - U.S. mortgage lending compliance
-- `fair-lending-v1` - Fair lending regulations
-- `hipaa-v1` - HIPAA PHI protection
+## Formula Syntax
+
+Constraints use structured JSON formulas that compile directly to Z3 expressions:
+
+| Operator | Syntax | Example |
+|----------|--------|---------|
+| And | `{"and": [...]}` | `{"and": [{"<=": ["x", 10]}, {">=": ["y", 0]}]}` |
+| Or | `{"or": [...]}` | `{"or": [{"==": ["approved", true]}, {">=": ["score", 700]}]}` |
+| Not | `{"not": {...}}` | `{"not": {"==": ["has_phi", true]}}` |
+| Implies | `{"implies": [A, B]}` | `{"implies": [{"==": ["is_denial", true]}, {"==": ["has_reason", true]}]}` |
+| If-Then-Else | `{"ite": [cond, then, else]}` | `{"ite": [{">": ["score", 700]}, "approved", "denied"]}` |
+| Equals | `{"==": [a, b]}` | `{"==": ["status", true]}` |
+| Less/Greater | `{"<=": [a, b]}` | `{"<=": ["dti", 43]}` |
+| Min/Max | `{"min": [a, b]}` | `{"<=": ["fee", {"min": [500, {"*": ["loan", 0.03]}]}]}` |
+
+## Example Ontologies
+
+| Ontology | Domain | Constraints | Description |
+|----------|--------|-------------|-------------|
+| `hipaa-v1` | Healthcare | 52 | HIPAA Privacy & Security Rule |
+| `mortgage-compliance-v1` | Lending | 5 | ATR/QM, HOEPA, UDAAP, Reg B |
+| `medical-safety-v1` | Healthcare | 5 | Drug interactions, dosing limits |
+| `financial-compliance-v1` | Finance | 5 | Investment advice, disclaimers |
+| `fair-lending-v1` | Lending | 5 | DTI limits, credit score requirements |
 
 ## Security
 
