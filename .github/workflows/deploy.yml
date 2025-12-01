@@ -1,10 +1,13 @@
 name: Deploy to Google Cloud Functions
 
+# Workflow disabled - uncomment 'on' section to re-enable
+# on:
+#   push:
+#     branches:
+#       - main
+#   workflow_dispatch:
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger only
     inputs:
       environment:
         description: 'Environment to deploy to'
